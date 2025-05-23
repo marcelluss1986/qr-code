@@ -31,30 +31,65 @@
   <script>
     const statusEl = document.getElementById("status");
 
-    function sendToApi(phoneNumber) {
+    async function getNewToken() {
+      try {
+        const response = await fetch("http://localhost:8080/api/token/refresh", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ refresh_token: localStorage.getItem("refresh_token") })
+        });
+
+        const data = await response.json();
+        if (data.access_token) {
+          localStorage.setItem("access_token", data.access_token);
+          return data.access_token;
+        } else {
+          console.error("Erro ao obter novo token.");
+          return null;
+        }
+      } catch (error) {
+        console.error("Erro ao conectar com a API:", error);
+        return null;
+      }
+    }
+
+    async function sendToApi(phoneNumber) {
+      let token = localStorage.getItem("access_token");
+
+      if (!token) {
+        token = await getNewToken();
+        if (!token) {
+          statusEl.textContent = "Erro ao obter token.";
+          return;
+        }
+      }
+
       const payload = {
         numero: phoneNumber,
         mensagem: "Texto da mensagem"
       };
 
-      fetch("http://localhost:8080/api/whatsapp", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      })
-        .then((response) => {
-          if (response.ok) {
-            statusEl.textContent = "Telefone enviado com sucesso!";
-          } else {
-            statusEl.textContent = "Erro ao enviar telefone.";
-          }
-        })
-        .catch((error) => {
-          console.error("Erro:", error);
-          statusEl.textContent = "Erro ao conectar com a API.";
+      try {
+        const response = await fetch("http://localhost:8080/api/whatsapp", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify(payload),
         });
+
+        if (response.ok) {
+          statusEl.textContent = "Telefone enviado com sucesso!";
+        } else {
+          statusEl.textContent = "Erro ao enviar telefone.";
+        }
+      } catch (error) {
+        console.error("Erro:", error);
+        statusEl.textContent = "Erro ao conectar com a API.";
+      }
     }
 
     function onScanSuccess(decodedText, decodedResult) {
