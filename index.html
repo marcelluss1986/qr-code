@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Leitor de QR Code</title>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+    }
+    #reader {
+      width: 300px;
+      margin-bottom: 20px;
+    }
+    #status {
+      margin-top: 10px;
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <h1>Leitor de QR Code</h1>
+  <div id="reader"></div>
+  <p id="status">Aguardando leitura...</p>
+
+  <script>
+    const statusEl = document.getElementById("status");
+
+    function sendToApi(phoneNumber) {
+      const payload = {
+        numero: phoneNumber,
+        mensagem: "Texto da mensagem"
+      };
+
+      fetch("http://localhost:8080/api/whatsapp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      })
+        .then((response) => {
+          if (response.ok) {
+            statusEl.textContent = "Telefone enviado com sucesso!";
+          } else {
+            statusEl.textContent = "Erro ao enviar telefone.";
+          }
+        })
+        .catch((error) => {
+          console.error("Erro:", error);
+          statusEl.textContent = "Erro ao conectar com a API.";
+        });
+    }
+
+    function onScanSuccess(decodedText, decodedResult) {
+      statusEl.textContent = `Telefone lido: ${decodedText}`;
+      sendToApi(decodedText);
+      html5QrcodeScanner.clear(); // Para parar após ler um código
+    }
+
+    const html5QrcodeScanner = new Html5QrcodeScanner("reader", {
+      fps: 10,
+      qrbox: 250,
+    });
+    html5QrcodeScanner.render(onScanSuccess);
+  </script>
+</body>
+</html>
